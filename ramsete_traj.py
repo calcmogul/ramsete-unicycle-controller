@@ -12,44 +12,53 @@ import frccontrol as fct
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from wpimath.geometry import Pose2d
-from wpimath.trajectory import TrajectoryConfig, TrajectoryGenerator
 
 from bookutil import latex, plotutil
+from bookutil.trajectory import generate_trajectory
 
 if "--noninteractive" in sys.argv:
     mpl.use("svg")
 
 
-def ramsete(pose_desired, v_desired, omega_desired, pose, b, zeta):
-    """Ramsete is a nonlinear time-varying feedback controller for unicycle
-    models that drives the model to a desired pose along a two-dimensional
-    trajectory.
+def ramsete(pose_desired, v_desired, omega_desired, pose, b, ζ):
+    """
+    Ramsete is a nonlinear time-varying feedback controller for unicycle models
+    that drives the model to a desired pose along a two-dimensional trajectory.
 
     The reference pose, linear velocity, and angular velocity should come from
     a drivetrain trajectory.
 
-    Keyword arguments:
-    pose_desired -- the desired pose
-    v_desired -- the desired linear velocity
-    omega_desired -- the desired angular velocity
-    pose -- the current pose
-    b -- tuning parameter (b > 0) for which larger values make convergence more
-         aggressive like a proportional term
-    zeta -- tuning parameter (0 < zeta < 1) for which larger values provide more
-            damping in response
+    Parameter ``pose_desired``:
+        The desired pose.
+
+    Parameter ``v_desired``:
+        The desired linear velocity.
+
+    Parameter ``omega_desired``:
+        The desired angular velocity.
+
+    Parameter ``pose``:
+        The current pose.
+
+    Parameter ``b``:
+        Tuning parameter (b > 0) for which larger values make convergence more
+        aggressive like a proportional term.
+
+    Parameter ``ζ``:
+        Tuning parameter (0 < ζ < 1) for which larger values provide more
+        damping in response.
 
     Returns:
-    linear velocity and angular velocity commands
+        Linear velocity and angular velocity commands.
     """
-    e = pose_desired.relativeTo(pose)
+    e = pose_desired.relative_to(pose)
 
-    k = 2 * zeta * math.sqrt(omega_desired**2 + b * v_desired**2)
-    v = v_desired * e.rotation().cos() + k * e.x
+    k = 2 * ζ * math.sqrt(omega_desired**2 + b * v_desired**2)
+    v = v_desired * e.rotation.cos + k * e.x
     omega = (
         omega_desired
-        + k * e.rotation().radians()
-        + b * v_desired * np.sinc(e.rotation().radians()) * e.y
+        + k * e.rotation.radians
+        + b * v_desired * np.sinc(e.rotation.radians) * e.y
     )
 
     return v, omega
@@ -59,10 +68,11 @@ class Drivetrain:
     """An frccontrol system for a differential drive."""
 
     def __init__(self, dt):
-        """Differential drive subsystem.
+        """
+        Differential drive subsystem.
 
-        Keyword arguments:
-        dt -- time between model/controller updates
+        Parameter ``dt``:
+            Time between model/controller updates.
         """
         self.dt = dt
 
@@ -79,7 +89,7 @@ class Drivetrain:
         # Moment of inertia of the differential drive in kg-m²
         J = 6.0
 
-        motor = fct.models.gearbox(fct.models.MOTOR_CIM, 3.0)
+        motor = fct.gearbox(fct.MOTOR_CIM, 3.0)
 
         C1 = -(G**2) * motor.Kt / (motor.Kv * motor.R * r**2)
         C2 = G * motor.Kt / (motor.R * r)
@@ -127,12 +137,14 @@ class Drivetrain:
         """
         Nonlinear differential drive dynamics.
 
-        Keyword arguments:
-        x -- state vector
-        u -- input vector
+        Parameter ``x``:
+            State vector.
+
+        Parameter ``u``:
+            Input vector.
 
         Returns:
-        dx/dt -- state derivative
+            State derivative.
         """
         return (
             np.array(
@@ -147,17 +159,18 @@ class Drivetrain:
             + np.block([[np.zeros((3, 2))], [self.velocity_B]]) @ u
         )
 
-    # pragma pylint: disable=unused-argument
     def h(self, x, u):
         """
         Nonlinear differential drive dynamics.
 
-        Keyword arguments:
-        x -- state vector
-        u -- input vector
+        Parameter ``x``:
+            State vector.
+
+        Parameter ``u``:
+            Input vector.
 
         Returns:
-        dx/dt -- state derivative
+            State derivative.
         """
         return x[2:, :]
 
@@ -165,9 +178,11 @@ class Drivetrain:
         """
         Advance the model by one timestep.
 
-        Keyword arguments:
-        r -- the current reference
-        next_r -- the next reference
+        Parameter ``r``:
+            The current reference.
+
+        Parameter ``next_r``:
+            The next reference.
         """
         # Update sim model
         self.x = fct.rkdp(self.f, self.x, self.u, self.dt)
@@ -184,10 +199,10 @@ class Drivetrain:
 
         # Pose feedback
         v_cmd, omega_cmd = ramsete(
-            Pose2d(r[0, 0], r[1, 0], r[2, 0]),
+            fct.Pose2d.from_triplet(r[0, 0], r[1, 0], r[2, 0]),
             (r[3, 0] + r[4, 0]) / 2,
             (r[4, 0] - r[3, 0]) / (2 * self.rb),
-            Pose2d(
+            fct.Pose2d.from_triplet(
                 self.observer.x_hat[0, 0],
                 self.observer.x_hat[1, 0],
                 self.observer.x_hat[2, 0],
@@ -216,23 +231,26 @@ def main():
     # Radius of robot in meters
     rb = 0.59055 / 2.0
 
-    trajectory = TrajectoryGenerator.generateTrajectory(
-        [Pose2d(1.330117, 13, 0), Pose2d(10.17, 18, 0)],
-        TrajectoryConfig(3.5, 3.5),
+    trajectory = generate_trajectory(
+        [fct.Pose2d.from_triplet(1, 13, 0), fct.Pose2d.from_triplet(10, 18, 0)],
+        3.5,
+        3.5,
+        3.5,
+        3.5,
     )
 
     refs = []
-    t_rec = np.arange(0, trajectory.totalTime(), dt)
+    t_rec = np.arange(0, trajectory.total_time(), dt)
     for t in t_rec:
         sample = trajectory.sample(t)
-        vl = sample.velocity - sample.velocity * sample.curvature * rb
-        vr = sample.velocity + sample.velocity * sample.curvature * rb
+        vl = sample.v - sample.ω * rb
+        vr = sample.v + sample.ω * rb
         refs.append(
             np.array(
                 [
-                    [sample.pose.X()],
-                    [sample.pose.Y()],
-                    [sample.pose.rotation().radians()],
+                    [sample.x],
+                    [sample.y],
+                    [sample.θ],
                     [vl],
                     [vr],
                 ]
@@ -249,7 +267,7 @@ def main():
     # Run simulation
     r_rec, x_rec, u_rec, _ = fct.generate_time_responses(drivetrain, refs)
 
-    fig = plt.figure(1)
+    fig = plt.figure()
     if "--noninteractive" in sys.argv:
         plotutil.plot_xy(
             fig,
@@ -260,7 +278,7 @@ def main():
         )
         latex.savefig("ramsete_traj_xy")
     else:
-        anim = plotutil.animate_xy(  # pragma pylint: disable=unused-variable
+        anim = plotutil.animate_xy(
             fig,
             r_rec[0, :],
             r_rec[1, :],
