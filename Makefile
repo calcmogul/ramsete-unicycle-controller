@@ -30,7 +30,7 @@ format:
 	./lint/format_bibliography.py
 	./lint/format_eol.py
 	./lint/format_paragraph_breaks.py
-	python -m black -q .
+	python -m ruff format -q .
 
 .PHONY: lint
 lint: format
@@ -63,9 +63,9 @@ setup_arch:
 		texlive-core \
 		texlive-latexextra \
 		python \
-		python-black \
 		python-pip \
-		python-requests
+		python-requests \
+		python-ruff
 
 .PHONY: setup_ubuntu
 setup_ubuntu:
@@ -83,8 +83,5 @@ setup_ubuntu:
 		python3-pip \
 		python3-requests \
 		python3-setuptools
-	# The Ubuntu 24.04 packages are too old
-	# Python packages
-	#   * black (to format Python source code)
-	#   * pylint (for Python linting)
-	pip install --user --break-system-packages autoflake black==24.3.0 frccontrol==2024.22 pylint robotpy-wpimath==2025.3.2
+	pip install -e ./bookutil
+	pip install --user --break-system-packages frccontrol==2026.12 ruff==0.15.18
