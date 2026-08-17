@@ -12,9 +12,9 @@ import frccontrol as fct
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from bookutil.trajectory import generate_trajectory
 
 from bookutil import latex, plotutil
-from bookutil.trajectory import generate_trajectory
 
 if "--noninteractive" in sys.argv:
     mpl.use("svg")
@@ -28,25 +28,15 @@ def ramsete(pose_desired, v_desired, omega_desired, pose, b, ζ):
     The reference pose, linear velocity, and angular velocity should come from
     a drivetrain trajectory.
 
-    Parameter ``pose_desired``:
-        The desired pose.
-
-    Parameter ``v_desired``:
-        The desired linear velocity.
-
-    Parameter ``omega_desired``:
-        The desired angular velocity.
-
-    Parameter ``pose``:
-        The current pose.
-
-    Parameter ``b``:
-        Tuning parameter (b > 0) for which larger values make convergence more
-        aggressive like a proportional term.
-
-    Parameter ``ζ``:
-        Tuning parameter (0 < ζ < 1) for which larger values provide more
-        damping in response.
+    Args:
+        pose_desired: The desired pose.
+        v_desired: The desired linear velocity.
+        omega_desired: The desired angular velocity.
+        pose: The current pose.
+        b: Tuning parameter (b > 0) for which larger values make convergence
+            more aggressive like a proportional term.
+        ζ: Tuning parameter (0 < ζ < 1) for which larger values provide more
+            damping in response.
 
     Returns:
         Linear velocity and angular velocity commands.
@@ -71,8 +61,8 @@ class Drivetrain:
         """
         Differential drive subsystem.
 
-        Parameter ``dt``:
-            Time between model/controller updates.
+        Args:
+            dt: Time between model/controller updates.
         """
         self.dt = dt
 
@@ -137,11 +127,9 @@ class Drivetrain:
         """
         Nonlinear differential drive dynamics.
 
-        Parameter ``x``:
-            State vector.
-
-        Parameter ``u``:
-            Input vector.
+        Args:
+            x: State vector.
+            u: Input vector.
 
         Returns:
             State derivative.
@@ -163,11 +151,9 @@ class Drivetrain:
         """
         Nonlinear differential drive dynamics.
 
-        Parameter ``x``:
-            State vector.
-
-        Parameter ``u``:
-            Input vector.
+        Args:
+            x: State vector.
+            u: Input vector.
 
         Returns:
             State derivative.
@@ -178,11 +164,9 @@ class Drivetrain:
         """
         Advance the model by one timestep.
 
-        Parameter ``r``:
-            The current reference.
-
-        Parameter ``next_r``:
-            The next reference.
+        Args:
+            r: The current reference.
+            next_r: The next reference.
         """
         # Update sim model
         self.x = fct.rkdp(self.f, self.x, self.u, self.dt)
